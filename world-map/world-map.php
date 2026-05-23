@@ -20,3 +20,11 @@ WorldMap\Loader::register(__DIR__ . '/includes');
 
 $plugin = new WorldMap\Plugin();
 $plugin->register_hooks();
+
+
+if (! function_exists('world_map_render')) {
+    function world_map_render(array $config = [], string $content = ''): string
+    {
+        return \WorldMap\Plugin::render_world_map($config, $content);
+    }
+}
