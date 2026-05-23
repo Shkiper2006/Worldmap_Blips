@@ -56,6 +56,7 @@ class Plugin
     {
         load_plugin_textdomain('world-map-blips', false, dirname(plugin_basename(__DIR__)) . '/languages');
         add_shortcode('world_map', [$this, 'render_world_map_shortcode']);
+        add_shortcode('worldmap_blips', [$this, 'render_world_map_shortcode']);
         register_block_type('world-map/blips', ['render_callback' => [$this, 'render_world_map_block']]);
     }
 
