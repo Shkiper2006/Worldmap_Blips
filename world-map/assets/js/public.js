@@ -12,8 +12,15 @@
     }
 
     function buildSlides(images) {
+        const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[char]));
         return images
-            .map((img) => `<div class="swiper-slide"><img loading="lazy" src="${img.url}" alt="${img.alt || ''}"><div class="swiper-lazy-preloader"></div></div>`)
+            .map((img) => `<div class="swiper-slide"><img loading="lazy" src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt)}"><div class="swiper-lazy-preloader"></div></div>`)
             .join('');
     }
 
@@ -39,14 +46,24 @@
         return overlay;
     }
 
-    function initMap(wrapper) {
+    async function initMap(wrapper) {
         const mapContainer = wrapper.querySelector('.world-map-blips__map');
         if (!mapContainer || typeof L === 'undefined') {
             return;
         }
 
         const data = parseData(wrapper);
-        const points = Array.isArray(data.points) ? data.points : [];
+        let points = Array.isArray(data.points) ? data.points : [];
+        if (!points.length && window.worldMapBlipsApi?.url) {
+            try {
+                const response = await fetch(window.worldMapBlipsApi.url, {
+                    headers: { 'X-WP-Nonce': window.worldMapBlipsApi.nonce || '' }
+                });
+                points = await response.json();
+            } catch (e) {
+                points = [];
+            }
+        }
 
         const map = L.map(mapContainer, {
             minZoom: MIN_ZOOM,
