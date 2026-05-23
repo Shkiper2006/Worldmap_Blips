@@ -20,6 +20,7 @@ WorldMap\Loader::register(__DIR__ . '/includes');
 
 $plugin = new WorldMap\Plugin();
 $plugin->register_hooks();
+register_activation_hook(__FILE__, ['WorldMap\\Plugin', 'activate']);
 
 
 if (! function_exists('world_map_render')) {
