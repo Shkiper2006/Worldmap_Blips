@@ -1,0 +1,1 @@
+/* World Map Blips public assets */
