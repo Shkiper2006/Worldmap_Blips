@@ -218,9 +218,17 @@
         }, { passive: false });
 
         const popup = createPopup(wrapper);
+        popup.setAttribute('aria-hidden', 'true');
+        let activeMarker = null;
+
         const closePopup = () => {
             popup.classList.remove('is-open');
+            popup.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('wmb-lock-scroll');
+            if (activeMarker) {
+                activeMarker.setAttribute('aria-expanded', 'false');
+                activeMarker.focus();
+            }
         };
 
         popup.addEventListener('click', (e) => {
@@ -228,7 +236,7 @@
         });
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closePopup();
+            if (e.key === 'Escape' && popup.classList.contains('is-open')) closePopup();
         });
 
         points.forEach((point, index) => {
@@ -242,6 +250,8 @@
             marker.style.top = `${latitudeToPercent(lat)}%`;
             marker.style.backgroundColor = point.icon_color || '#00d4ff';
             marker.ariaLabel = point.title || 'Location';
+            marker.setAttribute('aria-haspopup', 'dialog');
+            marker.setAttribute('aria-expanded', 'false');
 
             marker.addEventListener('click', () => {
                 const titleEl = popup.querySelector('.wmb-popup-title');
@@ -253,8 +263,13 @@
                 descriptionEl.innerHTML = point.description || '';
                 galleryEl.innerHTML = buildSlides(images);
 
+                activeMarker = marker;
+                marker.setAttribute('aria-expanded', 'true');
                 popup.classList.add('is-open');
+                popup.setAttribute('aria-hidden', 'false');
                 document.body.classList.add('wmb-lock-scroll');
+                const closeButton = popup.querySelector('.wmb-popup-close');
+                if (closeButton) closeButton.focus();
             });
 
             markerLayer.appendChild(marker);
