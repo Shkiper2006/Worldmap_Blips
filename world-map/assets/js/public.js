@@ -87,11 +87,20 @@
 
         const data = parseData(wrapper);
         let points = Array.isArray(data.points) ? data.points : [];
-        if (!points.length && window.worldMapBlipsApi?.url) {
+        const fetchEnabled = Boolean(data.use_frontend_fetch || window.worldMapBlipsApi?.fetchEnabled);
+        if (!points.length && fetchEnabled && window.worldMapBlipsApi?.url) {
             try {
                 const response = await fetch(window.worldMapBlipsApi.url, { headers: { 'X-WP-Nonce': window.worldMapBlipsApi.nonce || '' } });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 points = await response.json();
             } catch (e) {
+                const errorBox = document.createElement('div');
+                errorBox.className = 'world-map-blips__error';
+                errorBox.setAttribute('role', 'status');
+                errorBox.textContent = 'Map data is temporarily unavailable. Showing fallback view.';
+                wrapper.prepend(errorBox);
                 points = [];
             }
         }
