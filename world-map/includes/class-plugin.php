@@ -194,23 +194,19 @@ class Plugin
         if (is_admin()) {
             return;
         }
-        wp_enqueue_style('leaflet', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', [], '1.9.4');
-        wp_enqueue_script('leaflet', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', [], '1.9.4', true);
-
-        wp_enqueue_style('swiper', 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css', [], '11.1.3');
-        wp_enqueue_script('swiper', 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js', [], '11.1.3', true);
-
-        wp_enqueue_script('world-map-blips-public', plugin_dir_url(__DIR__) . 'assets/js/public.js', ['leaflet', 'swiper'], '0.1.0', true);
-        wp_enqueue_style('world-map-blips-public', plugin_dir_url(__DIR__) . 'assets/css/public.css', ['leaflet', 'swiper'], '0.1.0');
+        wp_enqueue_script('world-map-blips-public', plugin_dir_url(__DIR__) . 'assets/js/public.js', [], '0.2.0', true);
+        wp_enqueue_style('world-map-blips-public', plugin_dir_url(__DIR__) . 'assets/css/public.css', [], '0.2.0');
         wp_localize_script('world-map-blips-public', 'worldMapBlipsApi', [
             'url' => esc_url_raw(rest_url('world-map-blips/v1/markers')),
             'nonce' => wp_create_nonce('wp_rest'),
+            'worldMapImage' => esc_url_raw(plugin_dir_url(__DIR__) . 'assets/maps/world.svg'),
+            'tilesPattern' => esc_url_raw(plugin_dir_url(__DIR__) . 'assets/maps/tiles/{z}/{x}/{y}.webp'),
         ]);
     }
 
     public function add_defer_to_plugin_scripts(string $tag, string $handle, string $src): string
     {
-        if (in_array($handle, ['world-map-blips-public', 'leaflet', 'swiper'], true)) {
+        if (in_array($handle, ['world-map-blips-public'], true)) {
             return '<script src="' . esc_url($src) . '" defer></script>';
         }
         return $tag;

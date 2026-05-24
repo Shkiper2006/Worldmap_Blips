@@ -1,7 +1,7 @@
 (function () {
-    const MIN_ZOOM = 1;
-    const MAX_ZOOM = 6;
-    const START_ZOOM = 1.8;
+    const MIN_SCALE = 1;
+    const MAX_SCALE = 4;
+    const SCALE_STEP = 0.25;
 
     function parseData(el) {
         try {
@@ -19,8 +19,9 @@
             '"': '&quot;',
             "'": '&#039;'
         }[char]));
+
         return images
-            .map((img) => `<div class="swiper-slide"><img loading="lazy" src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt)}"><div class="swiper-lazy-preloader"></div></div>`)
+            .map((img) => `<img loading="lazy" src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt)}">`)
             .join('');
     }
 
@@ -32,55 +33,42 @@
                 <button class="wmb-popup-close" aria-label="Close popup">×</button>
                 <h4 class="wmb-popup-title"></h4>
                 <div class="wmb-popup-description"></div>
-                <div class="wmb-popup-gallery">
-                    <div class="swiper">
-                        <div class="swiper-wrapper"></div>
-                        <div class="swiper-pagination"></div>
-                        <div class="swiper-button-prev"></div>
-                        <div class="swiper-button-next"></div>
-                    </div>
-                </div>
+                <div class="wmb-popup-gallery"></div>
             </div>`;
 
         root.appendChild(overlay);
         return overlay;
     }
 
+    function longitudeToPercent(lng) { return ((lng + 180) / 360) * 100; }
+    function latitudeToPercent(lat) { return ((90 - lat) / 180) * 100; }
+
+    function setScale(mapSurface, levelEl, scale) {
+        mapSurface.style.transform = `scale(${scale.toFixed(2)})`;
+        levelEl.textContent = `${scale.toFixed(2)}x`;
+        mapSurface.dataset.scale = String(scale);
+    }
+
     async function initMap(wrapper) {
         const mapContainer = wrapper.querySelector('.world-map-blips__map');
-        if (!mapContainer || typeof L === 'undefined') {
-            return;
-        }
+        if (!mapContainer) return;
 
         const data = parseData(wrapper);
         let points = Array.isArray(data.points) ? data.points : [];
         if (!points.length && window.worldMapBlipsApi?.url) {
             try {
-                const response = await fetch(window.worldMapBlipsApi.url, {
-                    headers: { 'X-WP-Nonce': window.worldMapBlipsApi.nonce || '' }
-                });
+                const response = await fetch(window.worldMapBlipsApi.url, { headers: { 'X-WP-Nonce': window.worldMapBlipsApi.nonce || '' } });
                 points = await response.json();
             } catch (e) {
                 points = [];
             }
         }
 
-        const map = L.map(mapContainer, {
-            minZoom: MIN_ZOOM,
-            maxZoom: MAX_ZOOM,
-            zoomControl: false,
-            scrollWheelZoom: 'center',
-            dragging: true,
-            worldCopyJump: true,
-            maxBoundsViscosity: 0.9
-        }).setView([20, 0], START_ZOOM);
-
-        map.setMaxBounds([[-85, -180], [85, 180]]);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            noWrap: true
-        }).addTo(map);
+        mapContainer.innerHTML = `
+            <div class="wmb-map-surface">
+                <img class="wmb-map-image" src="${window.worldMapBlipsApi?.worldMapImage || ''}" alt="World map">
+                <div class="wmb-map-markers"></div>
+            </div>`;
 
         const controls = document.createElement('div');
         controls.className = 'wmb-zoom-controls';
@@ -90,21 +78,21 @@
             <button type="button" data-action="out" aria-label="Zoom out">−</button>`;
         mapContainer.appendChild(controls);
 
+        const mapSurface = mapContainer.querySelector('.wmb-map-surface');
+        const markerLayer = mapContainer.querySelector('.wmb-map-markers');
         const levelEl = controls.querySelector('.wmb-zoom-level');
-        const syncZoom = () => {
-            levelEl.textContent = map.getZoom().toFixed(1);
-        };
+
+        setScale(mapSurface, levelEl, MIN_SCALE);
 
         controls.addEventListener('click', (event) => {
             const target = event.target.closest('button');
             if (!target) return;
-            const action = target.dataset.action;
-            if (action === 'in') map.zoomIn();
-            if (action === 'out') map.zoomOut();
+            const current = Number(mapSurface.dataset.scale || MIN_SCALE);
+            const next = target.dataset.action === 'in'
+                ? Math.min(MAX_SCALE, current + SCALE_STEP)
+                : Math.max(MIN_SCALE, current - SCALE_STEP);
+            setScale(mapSurface, levelEl, next);
         });
-
-        map.on('zoomend', syncZoom);
-        syncZoom();
 
         const popup = createPopup(wrapper);
         const closePopup = () => {
@@ -113,64 +101,39 @@
         };
 
         popup.addEventListener('click', (e) => {
-            if (e.target === popup || e.target.closest('.wmb-popup-close')) {
-                closePopup();
-            }
+            if (e.target === popup || e.target.closest('.wmb-popup-close')) closePopup();
         });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closePopup();
         });
 
-        let swiperInstance = null;
-
         points.forEach((point) => {
             const lat = Number(point.lat ?? point.coord_y ?? 0);
             const lng = Number(point.lng ?? point.coord_x ?? 0);
-            const marker = L.circleMarker([lat, lng], {
-                radius: 8,
-                className: 'wmb-map-marker',
-                color: point.icon_color || '#00d4ff',
-                fillColor: point.icon_color || '#00d4ff',
-                fillOpacity: 0.95,
-                weight: 2
-            }).addTo(map);
+            const marker = document.createElement('button');
+            marker.type = 'button';
+            marker.className = 'wmb-map-marker';
+            marker.style.left = `${longitudeToPercent(lng)}%`;
+            marker.style.top = `${latitudeToPercent(lat)}%`;
+            marker.style.backgroundColor = point.icon_color || '#00d4ff';
+            marker.ariaLabel = point.title || 'Location';
 
-            marker.on('mouseover', () => {
-                marker.setRadius(11);
-            });
-            marker.on('mouseout', () => {
-                marker.setRadius(8);
-            });
-
-            marker.on('click', () => {
+            marker.addEventListener('click', () => {
                 const titleEl = popup.querySelector('.wmb-popup-title');
                 const descriptionEl = popup.querySelector('.wmb-popup-description');
-                const wrapperEl = popup.querySelector('.swiper-wrapper');
+                const galleryEl = popup.querySelector('.wmb-popup-gallery');
                 const images = Array.isArray(point.images) ? point.images : [];
 
                 titleEl.textContent = point.title || 'Location';
                 descriptionEl.innerHTML = point.description || '';
-                wrapperEl.innerHTML = buildSlides(images);
+                galleryEl.innerHTML = buildSlides(images);
 
                 popup.classList.add('is-open');
                 document.body.classList.add('wmb-lock-scroll');
-
-                if (swiperInstance) swiperInstance.destroy(true, true);
-                swiperInstance = new Swiper(popup.querySelector('.swiper'), {
-                    pagination: { el: popup.querySelector('.swiper-pagination') },
-                    navigation: {
-                        prevEl: popup.querySelector('.swiper-button-prev'),
-                        nextEl: popup.querySelector('.swiper-button-next')
-                    },
-                    lazy: true,
-                    spaceBetween: 12,
-                    slidesPerView: 1,
-                    breakpoints: {
-                        700: { slidesPerView: 2 }
-                    }
-                });
             });
+
+            markerLayer.appendChild(marker);
         });
     }
 
