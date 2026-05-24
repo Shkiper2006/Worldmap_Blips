@@ -1,2 +1,10 @@
-#wm-map-picker{max-width:520px;border:1px solid #ddd;padding:4px;display:inline-block}
-#wm-map-picker img{max-width:100%;height:auto;cursor:crosshair}
+#wm-map-picker{max-width:620px;border:1px solid #ddd;padding:8px;display:inline-block;background:#fff}
+.wm-map-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+#wm-zoom-value{font-weight:600;min-width:52px;display:inline-block}
+#wm-map-viewport{position:relative;overflow:hidden;border:1px solid #ccd0d4;height:340px;touch-action:none;cursor:grab;background:#f6f7f7}
+#wm-map-viewport.is-panning{cursor:grabbing}
+#wm-map-canvas{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+#wm-map-image{display:block;max-width:100%;width:600px;height:auto;user-select:none;-webkit-user-drag:none;pointer-events:none}
+#wm-map-marker{position:absolute;width:16px;height:16px;border-radius:50%;background:#d63638;border:2px solid #fff;box-shadow:0 0 0 1px #111;transform:translate(-50%,-50%);cursor:grab;display:none;padding:0}
+#wm-map-marker::before{content:'';position:absolute;inset:-7px;border-radius:50%}
+#wm-map-marker.is-dragging{cursor:grabbing}
