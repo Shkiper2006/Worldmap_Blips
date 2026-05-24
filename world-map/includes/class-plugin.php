@@ -156,7 +156,15 @@ class Plugin
 
     public function render_stub_page(): void
     {
-        echo '<div class="wrap"><h1>' . esc_html(get_admin_page_title()) . '</h1><p>' . esc_html__('Раздел в разработке.', 'world-map-blips') . '</p></div>';
+        $page = sanitize_key((string) ($_GET['page'] ?? ''));
+        echo '<div class="wrap"><h1>' . esc_html(get_admin_page_title()) . '</h1><p>' . esc_html__('Раздел в разработке.', 'world-map-blips') . '</p>';
+
+        if ($page === 'world-map-blips-settings') {
+            echo '<p><strong>' . esc_html__('Основной shortcode:', 'world-map-blips') . '</strong> <code>[world_map]</code></p>';
+            echo '<p><strong>' . esc_html__('Совместимость (deprecated):', 'world-map-blips') . '</strong> <code>[worldmap_blips]</code></p>';
+        }
+
+        echo '</div>';
     }
 
     public function render_world_map_shortcode(array $atts = [], string $content = ''): string { return self::render_world_map($atts, $content); }
